@@ -90,3 +90,60 @@ module.exports.address = async function (address, port, protocol) {
     throw new Error(err);
   };
 };
+
+
+/**
+  * Allow incoming requests through specific (IP) address. (root/sudo access is mandatory)
+  * @param {string} address IP address, supported by subnet/net mask. From range 0.0.0.0 to 255.255.255.255
+  * @param {number | undefined} fromPort The connection port to start the range from. From range 1 - 65535.
+  * @param {number | undefined} toPort The connection port to end the range at. From range 1 - 65535.
+  * @param {"udp" | "tcp" | undefined} protocol The protocol.
+  * @returns {Promise<Boolean>} Returns a boolean.
+*/
+module.exports.addressWithPortRange = async function (address, fromPort, toPort, protocol = "tcp") {
+  try {
+    // address validation
+    if (!address) throw new Error("Missing address input.");
+    if (typeof address !== "string") throw new Error("The address must be type of string.");
+    let checkAddress = util.checkAppropriateIP(address);
+    if (!checkAddress) return false;
+
+    // from port validation
+    if (fromPort) {
+      if (typeof fromPort !== "number") throw new Error("The from port must be type of number.");
+      let checkPort = util.checkAppropriatePort(fromPort);
+      if (!checkPort) return false;
+    } else return false;
+
+    // to port validation
+    if (toPort) {
+      if (typeof toPort !== "number") throw new Error("The to port must be type of number.");
+      let checkPort = util.checkAppropriatePort(toPort);
+      if (!checkPort) return false;
+    } else return false;
+
+    // protocol (tcp/udp) validation
+    if (protocol) {
+      if (typeof protocol !== "string") throw new Error("The protocol must be type of string.");
+      if (protocol !== "tcp" || protocol !== "udp") throw new Error('The protocol must be either "tcp" or "udp"');
+    };
+
+    let res = await promisifiedExec(`echo "y" | sudo ufw allow from ${address} to any port ${fromPort}:${toPort} proto ${protocol}`);
+    if (res.stderr) throw new Error(res.stderr);
+
+    if (res.stdout) {
+      // will find a better way to parse this
+      if (res.stdout.toLowerCase().match(/(added)/gi)) {
+        return true;
+      } else {
+        console.log(res.stdout);
+        return false;
+      };
+    } else {
+      console.log(res.stdout);
+      return false;
+    };
+  } catch (err) {
+    throw new Error(err);
+  };
+};
