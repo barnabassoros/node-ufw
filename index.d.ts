@@ -18,6 +18,7 @@ declare const nodeUfw: {
   allow: {
     port: (port: number, protocol?: "udp" | "tcp") => Promise<Boolean>;
     address: (address: string, port?: number, protocol?: "udp" | "tcp") => Promise<Boolean>;
+    addressWithPortRange: (address: string, fromPort?: number, toPort?: number, protocol?: "udp" | "tcp") => Promise<Boolean>;
   };
 
   deny: {
